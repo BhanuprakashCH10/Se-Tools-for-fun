@@ -1,0 +1,642 @@
+import vscode from 'vscode';
+
+function activate(context: vscode.ExtensionContext) {
+    let disposable = vscode.commands.registerCommand('apiCaller.callAPI', async () => {
+
+		const apiUrl = "https://9xbaecf7o2.execute-api.ap-south-1.amazonaws.com/prod/callanimal";
+
+        if (!apiUrl) {
+            vscode.window.showErrorMessage("API URL is required.");
+            return;
+        }
+
+        // Get message to send from user
+        const msgToSend = await vscode.window.showInputBox({
+            prompt: "Enter message to send",
+			placeHolder: "Too Busy...Will Connect Later",
+            value: "{}"
+        });
+
+		const jsonBody =  { 
+			"userid": "9876543210",
+			"message": msgToSend,
+			"receiverid": "9876543210",
+			"language": "en",
+			"animal": "cm"
+		  };
+		  
+
+        let requestBody = {};
+        try {
+            requestBody = jsonBody ? jsonBody : {};
+        } catch (error) {
+            vscode.window.showErrorMessage("Invalid JSON format.");
+            return;
+        }
+
+        try {
+            // Send API request
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json; charset=UTF-8" },
+                body: jsonBody ? JSON.stringify(requestBody) : undefined
+            });
+
+            const result = await response.json();
+/*
+            // Show response in a WebView
+            const panel = vscode.window.createWebviewPanel(
+                'apiResponse',
+                'API Response',
+                vscode.ViewColumn.One,
+                { enableScripts: true }
+            );
+
+            panel.webview.html = getWebviewContent(" ", JSON.stringify(result, null, 2));
+*/
+
+        } catch (error) {
+            vscode.window.showErrorMessage("API request failed: " + (error as Error).message);
+        }
+    });
+
+    context.subscriptions.push(disposable);
+
+	let getVideoListDisposable = vscode.commands.registerCommand('apiCaller.getMsgList', async () => {
+
+		const apiUrl = "https://pvu9i3cor7.execute-api.ap-south-1.amazonaws.com/prod/getvideos";
+
+        if (!apiUrl) {
+            vscode.window.showErrorMessage("API URL is required.");
+            return;
+        }
+
+
+		const jsonBody =  { "userid": "9876543210" };
+		  
+
+        let requestBody = {};
+        try {
+            requestBody = jsonBody ? jsonBody : {};
+        } catch (error) {
+            vscode.window.showErrorMessage("Invalid JSON format.");
+            return;
+        }
+
+        try {
+            // Send API request
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json; charset=UTF-8" },
+                body: jsonBody ? JSON.stringify(requestBody) : undefined
+            });
+
+            // Ensure result is treated as a JSON object
+            const result = (await response.json()) as { statusCode?: number; body?: string };
+
+            let messageIds = [];
+            if (result.body) {
+                try {
+                    const parsedBody = JSON.parse(result.body); // Parse the stringified JSON array
+                    if (Array.isArray(parsedBody)) {
+                        messageIds = parsedBody.map(item => item.messageid).filter(id => id); // Extract valid messageid values
+                    }
+                } catch (error) {
+                    vscode.window.showErrorMessage("Failed to parse 'body' field.");
+                }
+            }
+
+            // Get watched videos from global state
+            const watchedVideos: Set<string> = new Set(context.globalState.get("watchedVideos", []));
+
+
+            // Show response in a WebView
+            const panel = vscode.window.createWebviewPanel(
+                'apiResponse',
+                'API Response',
+                vscode.ViewColumn.One,
+                { enableScripts: true }
+            );
+
+            panel.webview.html = getWebviewContent(messageIds, watchedVideos);
+
+            panel.webview.onDidReceiveMessage(
+			(message: { command: string; selectedId: string }) => {
+				vscode.window.showInformationMessage(`command: ${message.command} selectedId: ${message.selectedId}`);
+				if (message.command === 'playVideo') {
+					vscode.window.showInformationMessage(`Playing: ${message.selectedId}`);
+                    // Mark video as watched
+                    watchedVideos.add(message.selectedId.split('/').pop() || '');
+                    context.globalState.update("watchedVideos", Array.from(watchedVideos));
+
+					panel.webview.html = getVideoPlayerHTML(message.selectedId);
+				}
+			},
+			undefined,
+			context.subscriptions
+		);
+
+        } catch (error) {
+            vscode.window.showErrorMessage("API request failed: " + (error as Error).message);
+        }
+    });
+
+    context.subscriptions.push(getVideoListDisposable);
+}
+
+
+async function fetchAndDisplayVideos(context: vscode.ExtensionContext) {
+    const apiUrl = "https://pvu9i3cor7.execute-api.ap-south-1.amazonaws.com/prod/getvideos";
+    const jsonBody = { "userid": "9876543210" };
+    
+    try {
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=UTF-8" },
+            body: JSON.stringify(jsonBody)
+        });
+        
+        const result = await response.json() as { body?: string };
+        let messageIds = [];
+        
+        if (result.body) {
+            const parsedBody = JSON.parse(result.body);
+            if (Array.isArray(parsedBody)) {
+                messageIds = parsedBody.map(item => item.messageid).filter(id => id);
+            }
+        }
+
+        const watchedVideos = new Set<string>(context.globalState.get<string[]>("watchedVideos", []));
+        const panel = vscode.window.createWebviewPanel('apiResponse', 'API Response', vscode.ViewColumn.One, { enableScripts: true });
+        
+        panel.webview.html = getWebviewContent(messageIds, watchedVideos);
+        
+        panel.webview.onDidReceiveMessage(
+            (message) => {
+                if (message.command === 'playVideo') {
+                    watchedVideos.add(message.selectedId.split('/').pop() || '');
+                    context.globalState.update("watchedVideos", Array.from(watchedVideos));
+                    panel.webview.html = getVideoPlayerHTML(message.selectedId);
+                } else if (message.command === 'resetVideos') {
+                    fetchAndDisplayVideos(context); // Refresh video list
+                }
+            },
+            undefined,
+            context.subscriptions
+        );
+    } catch (error) {
+        const errorMessage = (error as any).message || "Unknown error";
+        vscode.window.showErrorMessage("API request failed: " + errorMessage);
+    }
+}
+
+function getWebviewContent2(messageIds: string[], watchedVideos: Set<string>): string {
+    const baseURL = "https://animateoutput.s3.ap-south-1.amazonaws.com/"; 
+
+    const radioButtons = messageIds.map((id: string) => {
+        const isWatched = watchedVideos.has(id);
+        return `
+            <input type="radio" name="messageid" value="${id}" id="${id}">
+            <label for="${id}" style="color: ${isWatched ? 'grey' : 'white'}; font-weight: ${isWatched ? 'normal' : 'bold'};">${id}</label><br>
+        `;
+    }).join("");
+
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Select Video</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 10px; }
+            .container { margin: 20px; }
+            button { margin-top: 10px; padding: 8px 12px; background-color: #007acc; color: white; border: none; cursor: pointer; }
+            button:hover { background-color: #005f99; }
+        </style>
+    </head>
+    <body>
+        <h2>Select a Video to Play (Filename format: DayoftheWeek_HHMMSS_UserIdentify)</h2>
+        <div class="container">
+            ${radioButtons}
+        </div>
+        <button onclick="playSelectedVideo()">Play Video</button>
+
+        <script>
+            function playSelectedVideo() {
+                const selected = document.querySelector('input[name="messageid"]:checked');
+                if (selected) {
+                    vscode.postMessage({ command: 'playVideo', selectedId: '${baseURL}' + selected.value });
+                } else {
+                    alert("Please select a video.");
+                }
+            }
+
+            const vscode = acquireVsCodeApi();
+        </script>
+    </body>
+    </html>`;
+}
+
+function getWebviewContent3(messageIds: string[], watchedVideos: Set<string>): string {
+
+    const baseURL = "https://animateoutput.s3.ap-south-1.amazonaws.com/";
+
+    const radioButtons = messageIds.map((id: string) => {
+        const isWatched = watchedVideos.has(id);
+        return `
+            <input type="radio" name="messageid" value="${id}" id="${id}">
+            <label for="${id}" style="color: ${isWatched ? 'grey' : 'white'}; font-weight: ${isWatched ? 'normal' : 'bold'};">${id}</label><br>
+        `;
+    }).join("");
+
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Select Video</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 10px; background-color: black; color: white; display: flex; }
+            .left-panel { width: 30%; padding: 10px; border-right: 2px solid grey; }
+            .right-panel { width: 70%; position: relative; padding: 10px; display: flex; justify-content: center; align-items: center; }
+            
+            #videoContainer {
+                position: absolute;
+                top: 50px;
+                right: 10px;
+                width: 400px;
+                height: 400px;
+                border: 2px solid #007acc;
+                border-radius: 8px;
+                resize: both;
+                overflow: hidden;
+                background-color: black;
+            }
+            video {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+            #dragHandle {
+                width: 100%;
+                height: 20px;
+                background: #007acc;
+                cursor: move;
+                text-align: center;
+                color: white;
+                font-weight: bold;
+            }
+            button {
+                margin-top: 10px;
+                padding: 8px 12px;
+                background-color: #007acc;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            button:hover { background-color: #005f99; }
+        </style>
+    </head>
+    <body>
+        <div class="left-panel">
+            <h2>Select a Video</h2>
+            ${radioButtons}
+            <button onclick="playSelectedVideo()">Play Video</button>
+        </div>
+
+        <div class="right-panel">
+            <div id="videoContainer">
+                <div id="dragHandle">Drag</div>
+                <video id="videoPlayer" controls autoplay>
+                    <source id="videoSource" src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+
+        <script>
+            function playSelectedVideo() {
+                const selected = document.querySelector('input[name="messageid"]:checked');
+                if (selected) {
+                    const videoUrl = '${baseURL}' + selected.value;
+                    const videoPlayer = document.getElementById('videoPlayer');
+                    const videoSource = document.getElementById('videoSource');
+
+                    videoSource.src = videoUrl;
+                    videoPlayer.load();
+                    enablePiP(); // Auto-enable PiP
+                } else {
+                    alert("Please select a video.");
+                }
+            }
+
+            async function enablePiP() {
+                const video = document.getElementById('videoPlayer');
+                if (document.pictureInPictureEnabled && !video.disablePictureInPicture) {
+                    try {
+                        await video.requestPictureInPicture();
+                    } catch (error) {
+                        console.error("PiP failed:", error);
+                    }
+                }
+            }
+
+            // Dragging functionality
+            const videoContainer = document.getElementById("videoContainer");
+            const dragHandle = document.getElementById("dragHandle");
+            let isDragging = false, offsetX = 0, offsetY = 0;
+
+            dragHandle.addEventListener("mousedown", (e) => {
+                isDragging = true;
+                offsetX = e.clientX - videoContainer.offsetLeft;
+                offsetY = e.clientY - videoContainer.offsetTop;
+            });
+
+            document.addEventListener("mousemove", (e) => {
+                if (isDragging) {
+                    videoContainer.style.left = (e.clientX - offsetX) + "px";
+                    videoContainer.style.top = (e.clientY - offsetY) + "px";
+                }
+            });
+
+            document.addEventListener("mouseup", () => {
+                isDragging = false;
+            });
+        </script>
+    </body>
+    </html>`;
+}
+
+function getWebviewContent(messageIds: string[], watchedVideos: Set<string>): string {
+    const baseURL = "https://animateoutput.s3.ap-south-1.amazonaws.com/";
+    const apiURL = "https://9xbaecf7o2.execute-api.ap-south-1.amazonaws.com/prod/callanimal";
+
+    const radioButtons = messageIds.map((id: string) => {
+        const isWatched = watchedVideos.has(id);
+        return `
+            <input type="radio" name="messageid" value="${id}" id="${id}">
+            <label for="${id}" style="color: ${isWatched ? 'grey' : 'white'}; font-weight: ${isWatched ? 'normal' : 'bold'};">${id}</label><br>
+        `;
+    }).join("");
+
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Submit Message</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 10px; background-color: black; color: white; display: flex; }
+            .left-panel { width: 30%; padding: 10px; border-right: 2px solid grey; }
+            .right-panel { width: 70%; position: relative; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+            
+            #videoContainer {
+                position: relative;
+                width: 500px;
+                height: 300px;
+                border: 2px solid #007acc;
+                border-radius: 8px;
+                resize: both;
+                overflow: hidden;
+                background-color: black;
+            }
+            video {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+            #dragHandle {
+                width: 100%;
+                height: 20px;
+                background: #007acc;
+                cursor: move;
+                text-align: center;
+                color: white;
+                font-weight: bold;
+            }
+            textarea {
+                width: 90%;
+                max-width: 500px;
+                height: 60px;
+                margin-top: 10px;
+                border: 1px solid #007acc;
+                border-radius: 5px;
+                padding: 8px;
+                background-color: #222;
+                color: white;
+                resize: none;
+            }
+            button {
+                margin-top: 10px;
+                padding: 8px 12px;
+                background-color: #007acc;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            button:hover { background-color: #005f99; }
+        </style>
+    </head>
+    <body>
+        <div class="left-panel">
+            <h2>Select a Video</h2>
+            ${radioButtons}
+            <button onclick="playSelectedVideo()">Play Video</button>
+        </div>
+
+        <div class="right-panel">
+            <div id="videoContainer">
+                <div id="dragHandle">Drag</div>
+                <video id="videoPlayer" controls autoplay>
+                    <source id="videoSource" src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+
+            <textarea id="commentBox" maxlength="150" placeholder="Enter your comment (max 150 chars)"></textarea>
+            <button onclick="submitComment()">Submit Message</button>
+        </div>
+
+        <script>
+            function playSelectedVideo() {
+                const selected = document.querySelector('input[name="messageid"]:checked');
+                if (selected) {
+                    const videoUrl = '${baseURL}' + selected.value;
+                    const videoPlayer = document.getElementById('videoPlayer');
+                    const videoSource = document.getElementById('videoSource');
+
+                    videoSource.src = videoUrl;
+                    videoPlayer.load();
+                    enablePiP(); // Auto-enable PiP
+                } else {
+                    alert("Please select a video.");
+                }
+            }
+
+            async function enablePiP() {
+                const video = document.getElementById('videoPlayer');
+                if (document.pictureInPictureEnabled && !video.disablePictureInPicture) {
+                    try {
+                        await video.requestPictureInPicture();
+                    } catch (error) {
+                        console.error("PiP failed:", error);
+                    }
+                }
+            }
+
+            function submitComment() {
+                const selected = document.querySelector('input[name="messageid"]:checked');
+                if (!selected) {
+                    alert("Please select a video before submitting a comment.");
+                    return;
+                }
+
+                const comment = document.getElementById('commentBox').value.trim();
+                if (comment.length === 0) {
+                    alert("Comment cannot be empty.");
+                    return;
+                }
+
+                fetch('${apiURL}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+
+                    body: JSON.stringify(
+                                            { 
+                                                "userid": "9876543210",
+                                                "message": comment,
+                                                "receiverid": "9876543210",
+                                                "language": "en",
+                                                "animal": "cm"
+                                            }
+                                        )
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert("Comment submitted successfully!");
+                    document.getElementById('commentBox').value = ""; // Clear input
+                })
+                .catch(error => {
+                    console.error("Error submitting comment:", error);
+                    alert("Failed to submit message.");
+                });
+            }
+
+            // Dragging functionality
+            const videoContainer = document.getElementById("videoContainer");
+            const dragHandle = document.getElementById("dragHandle");
+            let isDragging = false, offsetX = 0, offsetY = 0;
+
+            dragHandle.addEventListener("mousedown", (e) => {
+                isDragging = true;
+                offsetX = e.clientX - videoContainer.offsetLeft;
+                offsetY = e.clientY - videoContainer.offsetTop;
+            });
+
+            document.addEventListener("mousemove", (e) => {
+                if (isDragging) {
+                    videoContainer.style.left = (e.clientX - offsetX) + "px";
+                    videoContainer.style.top = (e.clientY - offsetY) + "px";
+                }
+            });
+
+            document.addEventListener("mouseup", () => {
+                isDragging = false;
+            });
+        </script>
+    </body>
+    </html>`;
+}
+
+function getVideoPlayerHTML(videoUrl: string): string {
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Playing Video</title>
+        <style>
+            body { text-align: center; padding: 20px; font-family: Arial, sans-serif; background-color: black; color: white; }
+            #videoContainer {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                width: 500px;
+                height: 300px;
+                border: 2px solid #007acc;
+                border-radius: 8px;
+                resize: both;
+                overflow: hidden;
+                background-color: black;
+            }
+            video {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+            #dragHandle {
+                width: 100%;
+                height: 20px;
+                background: #007acc;
+                cursor: move;
+                text-align: center;
+                color: white;
+                font-weight: bold;
+            }
+            button {
+                margin-top: 10px;
+                padding: 8px 12px;
+                background-color: #007acc;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            button:hover { background-color: #005f99; }
+        </style>
+    </head>
+    <body>
+        <div id="videoContainer">
+            <div id="dragHandle">Drag me</div>
+            <video id="videoPlayer" controls autoplay>
+                <source src="${videoUrl}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <br>
+        <button onclick="enablePiP()">Enable Picture-in-Picture</button>
+
+        <script>
+            async function enablePiP() {
+                const video = document.getElementById('videoPlayer');
+                if (document.pictureInPictureEnabled && !video.disablePictureInPicture) {
+                    try {
+                        await video.requestPictureInPicture();
+                    } catch (error) {
+                        console.error("PiP failed:", error);
+                    }
+                } else {
+                    alert("Picture-in-Picture is not supported in this browser.");
+                }
+            }
+
+            // Dragging functionality
+            const videoContainer = document.getElementById("videoContainer");
+            const dragHandle = document.getElementById("dragHandle");
+            let isDragging = false, offsetX = 0, offsetY = 0;
+
+            dragHandle.addEventListener("mousedown", (e) => {
+                isDragging = true;
+                offsetX = e.clientX - videoContainer.offsetLeft;
+                offsetY = e.clientY - videoContainer.offsetTop;
+            });
+
+            document.addEventListener("mousemove", (e) => {
+                if (isDragging) {
+                    videoContainer.style.left = (e.clientX - offsetX) + "px";
+                    videoContainer.style.top = (e.clientY - offsetY) + "px";
+                }
+            });
+
+            document.addEventListener("mouseup", () => {
+                isDragging = false;
+            });
+        </script>
+    </body>
+    </html>`;
+}
+
+function deactivate() {}
+
+module.exports = { activate, deactivate };

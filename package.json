@@ -1,0 +1,98 @@
+{
+  "name": "codebuddy",
+  "displayName": "Code Buddy",
+  "description": "Take a small break to connect with friends and relax for better productivity. Also, roast your code with brutal sarcasm and emojis. Additionally, track compilation errors and view statistics.",
+  "version": "0.0.4",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:extension.takeABreak",
+    "onCommand:extension.roastCode",
+    "onCommand:extension.countCompilationDetails",
+    "onCommand:extension.retrieveLastCompilationDetails",
+    "onCommand:extension.clearSpecificWorkspaceState",
+    "onCommand:extension.openChatbot"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.takeABreak",
+        "title": "Take a Break"
+      },
+      {
+        "command": "extension.roastCode",
+        "title": "Roast Thy Code"
+      },
+      {
+        "command": "extension.countCompilationDetails",
+        "title": "Count Compilation Errors"
+      },
+      {
+        "command": "extension.retrieveLastCompilationDetails",
+        "title": "Retrieve Compilation Details"
+      },
+      {
+        "command": "extension.clearSpecificWorkspaceState",
+        "title": "Clear Compilation Details"
+      },
+      {
+        "command": "extension.openChatbot",
+        "title": "Open Chatbot"
+      }
+    ],
+    "configuration": {
+      "title": "Meme Break",
+      "properties": {
+        "memeBreak.intervalMinutes": {
+          "type": "number",
+          "default": 10,
+          "description": "Interval between break reminders in minutes."
+        },
+        "memeBreak.snoozeMinutes": {
+          "type": "number",
+          "default": 5,
+          "description": "Snooze duration in minutes when postponing a break."
+        },
+        "memeBreak.memeLimit": {
+          "type": "number",
+          "default": 5,
+          "description": "Number of memes to show per break."
+        },
+        "memeBreak.memeCost": {
+          "type": "number",
+          "default": 1000,
+          "description": "Cost per meme viewed."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.22.0",
+    "@typescript-eslint/parser": "^8.22.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.19.0",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "vsce": "^2.15.0"
+  }
+}
