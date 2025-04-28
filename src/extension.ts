@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { activateCodeRoast } from './features/codeRoast';
-import { activateBreakTime } from './features/breakTime';
+import { activateBreakTime } from './features/breakTime/breakTime';
 import { activateCompilationTracker } from './features/compilationTracker';
 import { Chatbot } from './features/chatbot';
 

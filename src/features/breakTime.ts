@@ -19,11 +19,10 @@ export function activateBreakTime(context: vscode.ExtensionContext) {
     let isBreakActive = false;
 
     // Initialize money if not set
-    const initialMoney = context.globalState.get<number>('money', 0);
+    const initialMoney = context.globalState.get<number>('money', 100);
     if (initialMoney === 0) {
-        context.globalState.update('money', 0); // Start with 0 money
+        context.globalState.update('money', 100); // Start with 0 money
     }
-
     function startTimer() {
         if (isBreakActive) { return; }
         breakTimer = setInterval(() => {
@@ -136,6 +135,13 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     if (isNaN(amount) || amount < 250) {
                         currentPanel.webview.postMessage({ command: 'showError', message: 'Minimum 250 ml required!' });
                     } else {
+                        // Award money for drinking enough water
+                        const reward = 10;
+                        const updatedMoney = currentMoney + reward;
+                        await context.globalState.update('money', updatedMoney);
+                        currentPanel.webview.postMessage({ command: 'updateMoney', amount: updatedMoney });
+                        // After updating money
+                        currentPanel.webview.postMessage({ command: 'showReward', amount: reward }); // reward is the amount earned
                         state.subMode = 'stretchBreak';
                         state.breakProgress = 3;
                         renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
@@ -205,6 +211,8 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     const newMoney = currentMoney + message.amount;
                     await context.globalState.update('money', newMoney);
                     currentPanel.webview.postMessage({ command: 'updateMoney', amount: newMoney });
+                    // After updating money
+                    currentPanel.webview.postMessage({ command: 'showReward', amount: message.amount }); 
                     break;
 
                 case 'refreshVideos':
@@ -278,11 +286,30 @@ function renderPage(panel: vscode.WebviewPanel | undefined, state: State, contex
             panel.webview.html = `
                 <!DOCTYPE html>
                 <html>
-                <head><meta charset="UTF-8"><style>${getCommonStyles()}</style></head>
+                <head><meta charset="UTF-8"><style>${getCommonStyles()}
+                .floating-reward {
+                    position: fixed;
+                    left: 50%;
+                    top: 60px;
+                    transform: translateX(-50%);
+                    font-size: 2em;
+                    color: #4caf50;
+                    font-weight: bold;
+                    opacity: 1;
+                    pointer-events: none;
+                    z-index: 9999;
+                    animation: floatUpFade 1.2s ease-out forwards;
+                }
+                @keyframes floatUpFade {
+                    0% { opacity: 1; top: 60px; }
+                    80% { opacity: 1; }
+                    100% { opacity: 0; top: 10px; }
+                }
+                </style></head>
                 <body>
                     <div class="container">
                         <h1>🎉 Break Complete!</h1>
-                        <p>Current Money: ${currentMoney} units</p>
+                        <p>Current Money:<span class="money-value"> ${currentMoney} units</span></p>
                         <p>Choose an activity:</p>
                         <div class="button-group">
                             <button class="primary" onclick="startMemes()">View Memes (50 units)</button>
@@ -293,11 +320,30 @@ function renderPage(panel: vscode.WebviewPanel | undefined, state: State, contex
                     </div>
                     <script>
                         const vscode = acquireVsCodeApi();
+                        function showFloatingReward(amount) {
+                            const emoji = '💰';
+                            const rewardEl = document.createElement('div');
+                            rewardEl.textContent = \`+ \${amount} units \${emoji} \`;
+                            rewardEl.className = 'floating-reward';
+                            document.body.appendChild(rewardEl);
+                            setTimeout(() => { rewardEl.remove(); }, 2000);
+                        }
+                        
                         function startMemes() { vscode.postMessage({ command: 'startMemes' }); }
                         function startSocialBreak() { vscode.postMessage({ command: 'startSocialBreak' }); }
                         function closePanel() { vscode.postMessage({ command: 'close' }); }
                         window.addEventListener('message', event => {
                             const message = event.data;
+                            if (message.command === 'showReward') {
+                                showFloatingReward(message.amount);
+                            }
+                            if (message.command === 'updateMoney') {
+                                // Update all elements showing money
+                                document.querySelectorAll('.money-value').forEach(el => {
+                                    el.textContent = message.amount + ' units';
+                                });
+                            }
+
                             if (message.command === 'showError') {
                                 const errorEl = document.getElementById('error');
                                 errorEl.textContent = message.message;
@@ -342,7 +388,7 @@ function renderPage(panel: vscode.WebviewPanel | undefined, state: State, contex
                 <body>
                     <div class="container">
                         <h1>🎉 Meme Break is Done!</h1>
-                        <p>Current Money: ${currentMoney} units</p>
+                        <p>Current Money:<span class="money-value"> ${currentMoney} units</span></p>
                         <p>You've viewed ${state.memeLimit} memes. What would you like to do?</p>
                         <div class="button-group">
                             ${state.memeRound === 1 ? '<button class="primary" onclick="viewMoreMemes()">5 More Memes (50 units)</button>' : ''}
@@ -708,7 +754,7 @@ function renderBreakLimitPage(panel: vscode.WebviewPanel | undefined, state: Sta
         <body>
             <div class="container">
                 <h1>⏰ Break Over</h1>
-                <p>Current Money: ${currentMoney} units</p>
+                <p>Current Money:<span class="money-value"> ${currentMoney} units</span></p>
                 <p>You've viewed ${state.memeLimit * (state.memeRound === 2 ? 2 : 1)} memes. That's enough</p>
                 <button onclick="closePanel()">Get Back To Work</button>
             </div>
