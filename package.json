@@ -16,11 +16,7 @@
 },
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:extension.takeABreak",
     "onCommand:extension.roastCode",
-    "onCommand:extension.countCompilationDetails",
-    "onCommand:extension.retrieveLastCompilationDetails",
-    "onCommand:extension.clearSpecificWorkspaceState",
     "onCommand:extension.openChatbot"
   ],
   "main": "./out/extension.js",
@@ -35,12 +31,20 @@
         "title": "Roast Thy Code"
       },
       {
+        "command": "extension.analyzeJavaCodeSmell",
+        "title": "Analyze Java Code Smell"
+      },
+      {
         "command": "extension.countCompilationDetails",
         "title": "Count Compilation Errors"
       },
       {
         "command": "extension.retrieveLastCompilationDetails",
         "title": "Retrieve Compilation Details"
+      },
+      {
+        "command": "extension.Appreciate",
+        "title": "Appreciate Your Team Members"
       },
       {
         "command": "extension.clearSpecificWorkspaceState",
