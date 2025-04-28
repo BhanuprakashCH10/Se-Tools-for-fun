@@ -1,14 +1,16 @@
 import * as vscode from 'vscode';
 import { activateCodeRoast } from './features/codeRoast';
 import { activateBreakTime } from './features/breakTime/breakTime';
-import { activateCompilationTracker } from './features/compilationTracker';
+import { activateCompileErrors } from './features/compilationTracker';
+import { activateAppreciate } from './features/appreciate';
 import { Chatbot } from './features/chatbot';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Extension "codebuddy" is now active!');
     activateCodeRoast(context);
     activateBreakTime(context);
-    activateCompilationTracker(context);
+    activateCompileErrors(context);
+    activateAppreciate(context);
     const chatbot = new Chatbot(context);
     const chatCommand = vscode.commands.registerCommand('extension.openChatbot', () => {
         chatbot.openChatPanel();
