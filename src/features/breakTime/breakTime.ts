@@ -32,6 +32,7 @@ export function activateBreakTime(context: vscode.ExtensionContext) {
                 .then(selection => {
                     isBreakActive = false;
                     if (selection === 'Take Break') {
+                        if (currentPanel) { currentPanel.dispose(); }
                         showBreakWebview(context, memeLimit);
                     } else if (selection === 'Snooze') {
                         if (breakTimer) { clearInterval(breakTimer); }
@@ -230,7 +231,9 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     break;
 
                 case 'reset':
-                    currentPanel.dispose();
+                    if (currentPanel) { currentPanel.reveal(vscode.ViewColumn.One); }
+                    else{ currentPanel = vscode.window.createWebviewPanel( 'mindfulBreak', 'Mindful Break', vscode.ViewColumn.One, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [vscode.Uri.file(memesFolderPath)] } ); }
+                    if (currentPanel) { await fetchAndDisplayVideos(currentPanel, state, context, username); }
                     break;
 
                 case 'close':

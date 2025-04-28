@@ -42,13 +42,14 @@ export async function fetchAndDisplayVideos(panel: vscode.WebviewPanel, state: S
             }
         }
 
-        panel.webview.html = getSocialBreakContent(messageIds, state.watchedVideos, username, totalSongs, state.gamePlayed);
+        panel.webview.html = getSocialBreakContent(messageIds, state.watchedVideos, username, totalSongs);
     } catch (error) {
         vscode.window.showErrorMessage(`API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
-function getSocialBreakContent(messageIds: { id: string; msg: string; lang: string }[], watchedVideos: Set<string>, username: string, songsCount: number, gamePlayed: boolean): string {
+
+export function getSocialBreakContent(messageIds: { id: string; msg: string; lang: string }[], watchedVideos: Set<string>, username: string, songsCount: number): string {
     const values = [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, -40000];
     const shuffledValues = values.sort(() => Math.random() - 0.5);
 
@@ -106,6 +107,9 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
             .right-panel .medal { display: none; width: 280px; height: 40px; background: gold; border-radius: 10%; text-align: center; font-size: 18px; font-weight: bold; line-height: 30px; color: black; margin-top: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); }
             .right-panel .reset-button { display: none; margin-top: 10px; padding: 6px; font-size: 16px; font-weight: bold; background: red; color: white; border: none; border-radius: 5px; cursor: pointer; }
             .right-panel .reset-button:hover { background: darkred; }
+            .right-panel .ins-button { display: block; margin-top: 12px; padding: 6px; font-size: 16px; font-weight: bold; background: blue; color: white; border: none; border-radius: 5px; cursor: pointer; }
+            .right-panel .ins-button:hover { background: darkred; }
+            .right-panel .instructions-container { max-height: 90px;  overflow-y: auto; border: 1px solid #ccc; padding: 6px;  display: none; margin-top: 6px; line-height: 1.5; }
             .floating-reward {
                 position: fixed;
                 left: 50%;
@@ -186,14 +190,32 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
                 <tr><td id="user-total">0</td><td id="comp-total">0</td></tr>
             </table>
             <br>
-            <button id="add-rounded-sum" style="margin-top: 10px; display: ${gamePlayed ? 'none' : 'none'}; color: #333;" onclick="addofferValueToUserTotal();">Add Rounded Sum</button>
-            <button id="reset" class="reset-button" onclick="closePanel()">Close</button>
+            <button id="add-rounded-sum" style="margin-top: 10px; display: none; color: #333;" onclick="addofferValueToUserTotal();">Add Rounded Sum</button>
+            <button id="reset" class="reset-button" onclick="resetGame()">Play Again</button> 
+            <button id="instruction" class="ins-button" onclick="toggleInstructions()">Instructions</button>  
+
+            <div id="instructions" class="instructions-container">
+                <ol>
+                <li>You will play with the Computer</li>                
+                <li>Each box will contain random amount between ₹5K to ₹40K in increments of ₹5K</li>
+                <li>One box will have a negative amount ₹-40K</li>
+                <li>Click Any of the 9 boxes to start</li>
+                <li>The amount You see in Your clicked box will be added to your account</li>
+                <li>Computer will select a box after You. So please wait before clicking the next box.</li>
+                <li>The amount in the computer clicked box will be added to Computer's account</li>
+                <li>Computer will randomly give you an Offer to quit the game</li>
+                <li>You can choose to avail computer's  Offer to Quit. If so the amount will be added to your account</li>
+                <li>Once you chose computer's  Offer to Quit, You will not be allowed to select any boxes. But the computer will select its remaining boxes</li>
+                <li>Either You or Computer having highest amount in account is the Winner at the end</li>
+                <li>The Offer to Quit amount from computer is calculative and not random. So your chances of winning is high</li>
+                <li>Clicked Boxes will be (1).Yellow if amount <= ₹20K (2). Green if amount > ₹20K (3). Red if amount < 0 </li>
+                </ol>
+            </div>
         </div>
         <script>
             let selectedUser = "";
             let songIndex = 0;
             const totalSongs = ${songsCount};
-            let gamePlayed = ${gamePlayed};
 
             function toggleDropdown() { document.getElementById("userDropdown").style.display = "block"; }
             function selectUser(user) { document.getElementById("userSearch").value = user; document.getElementById("userDropdown").style.display = "none"; selectedUser = user; }
@@ -307,7 +329,7 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
             let compScores = [];
 
             function userClick(index) {
-                if (buttonsDisabled || offerAccepted || gamePlayed) return;
+                if (buttonsDisabled || offerAccepted) return;
                 let button = document.getElementById('btn' + index);
                 let value = parseInt(button.getAttribute('data-value'));
                 handleButtonClick(index, value, 'User');
@@ -376,7 +398,7 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
                 if (offerValue < 0) { offerValue = 0; }
                 if (compClicks === 4) { offerValue = 0; }
                 let button = document.getElementById('add-rounded-sum');
-                if (offerValue !== 0 && !gamePlayed) {
+                if (offerValue !== 0) {
                     button.innerText = \`Offer to Quit ₹\${offerValue.toLocaleString()}\`;
                     button.style.display = 'block';
                     button.setAttribute('data-value', offerValue);
@@ -400,7 +422,6 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
             }
 
             function checkWinner() {
-                gamePlayed = true;
                 let gameResult = userTotal > compTotal ? "You Won" : "It's a Time-pass Game...";
                 document.getElementById('medal').innerText = gameResult;
                 document.getElementById('medal').style.display = 'block';
@@ -410,6 +431,13 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
                 if (gameResult === "You Won") {
                     vscode.postMessage({ command: 'awardMoney', amount: 100 });
                 }
+            }
+            function toggleInstructions() {
+            const box = document.getElementById('instructions');
+            box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+            }
+            function resetGame() {
+                vscode.postMessage({ command: 'reset' });
             }
 
             function closePanel() { vscode.postMessage({ command: 'close' }); }
@@ -430,7 +458,7 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
     </html>`;
 }
 
-async function getVideoCount(): Promise<number> {
+export async function getVideoCount(): Promise<number> {
     const url = "https://animateinput.s3.ap-south-1.amazonaws.com/videocount.txt";
     try {
         const response = await fetch(url);
@@ -444,7 +472,7 @@ async function getVideoCount(): Promise<number> {
     }
 }
 
-async function fetchAllUsers(): Promise<string[]> {
+export async function fetchAllUsers(): Promise<string[]> {
     const getAllUsersApiURL = "https://w0jnm95oyc.execute-api.ap-south-1.amazonaws.com/animal/userlist";
     try {
         const response = await fetch(getAllUsersApiURL, {
@@ -466,7 +494,7 @@ async function fetchAllUsers(): Promise<string[]> {
     }
 }
 
-async function registerUser(username: string): Promise<boolean> {
+export async function registerUser(username: string): Promise<boolean> {
     try {
         const response = await fetch("https://raoh09sh65.execute-api.ap-south-1.amazonaws.com/prod/registeruser", {
             method: "POST",
