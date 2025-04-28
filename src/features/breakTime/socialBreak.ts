@@ -42,17 +42,18 @@ export async function fetchAndDisplayVideos(panel: vscode.WebviewPanel, state: S
             }
         }
 
-        panel.webview.html = getSocialBreakContent(messageIds, state.watchedVideos, username, totalSongs);
+        panel.webview.html = getSocialBreakContent(messageIds, state.watchedVideos, username, totalSongs, "closePanel");
     } catch (error) {
         vscode.window.showErrorMessage(`API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
 
-export function getSocialBreakContent(messageIds: { id: string; msg: string; lang: string }[], watchedVideos: Set<string>, username: string, songsCount: number): string {
+export function getSocialBreakContent(messageIds: { id: string; msg: string; lang: string }[], watchedVideos: Set<string>, username: string, songsCount: number, gameAction: String): string {
     const values = [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, -40000];
     const shuffledValues = values.sort(() => Math.random() - 0.5);
-
+    const gameActionFunction = gameAction === "closePanel" ? "closePanel()" : "resetGame()";
+    const gameActionText = gameAction === "closePanel" ? "Close" : "Play Again";
     const videoURL = "https://animateoutput.s3.ap-south-1.amazonaws.com/";
     const sendMsgApiURL = "https://9xbaecf7o2.execute-api.ap-south-1.amazonaws.com/prod/callanimal";
 
@@ -191,7 +192,7 @@ export function getSocialBreakContent(messageIds: { id: string; msg: string; lan
             </table>
             <br>
             <button id="add-rounded-sum" style="margin-top: 10px; display: none; color: #333;" onclick="addofferValueToUserTotal();">Add Rounded Sum</button>
-            <button id="reset" class="reset-button" onclick="resetGame()">Play Again</button> 
+            <button id="reset" class="reset-button" onclick="${gameActionFunction}">${gameActionText}</button> 
             <button id="instruction" class="ins-button" onclick="toggleInstructions()">Instructions</button>  
 
             <div id="instructions" class="instructions-container">
