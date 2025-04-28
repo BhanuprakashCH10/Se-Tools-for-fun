@@ -1,11 +1,28 @@
-.vscode/**
-.vscode-test/**
+# --- Ignore entire folders you don’t need in the VSIX ---
+archive/
+backup/
+node_modules/
+.vscode/
 
+# --- Ignore project-config and build-only files ---
+.vscode-test.mjs
+.vscodeignore
 .gitignore
-.yarnrc
 vsc-extension-quickstart.md
-**/tsconfig.json
-**/eslint.config.mjs
-**/*.map
-**/*.ts
-**/.vscode-test.*
+eslint.config.mjs
+tsconfig.json
+package-lock.json
+*.tgz
+
+# --- Ignore any existing VSIX artifacts ---
+*.vsix
+
+# --- Exclude all your TypeScript source… ---
+src/
+
+# …but re-include ONLY the memes folder you want shipped —
+!src/memes/
+!src/memes/**
+
+# (Everything else not matched above stays included: 
+#  package.json, README.md, CHANGELOG.md, LICENSE, out/**, etc.)
