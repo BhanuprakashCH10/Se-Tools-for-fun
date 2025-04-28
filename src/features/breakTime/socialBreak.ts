@@ -103,10 +103,27 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
             .right-panel .score-table th { background: white; color: blue; font-weight: bold; }
             .right-panel .score-table th, .score-table td { border: 1px solid white; padding: 5px; font-size: 16px; }
             #add-rounded-sum { margin-top: 10px; display: none; background: linear-gradient(to top, #ffff00, #ffcc00); color: black; font-weight: bold; padding: 2px; border: 3px solid #ffaa00; border-radius: 8px; cursor: pointer; box-shadow: inset 0px -5px 5px rgba(255, 255, 0, 0.5), inset 0px 5px 5px rgba(255, 204, 0, 0.7), 3px 3px 5px rgba(255, 153, 0, 0.5); }
-            #add-rounded-sum:hover { background: linear-gradient(to top, #ffcc00, #ffff00); }
             .right-panel .medal { display: none; width: 280px; height: 40px; background: gold; border-radius: 10%; text-align: center; font-size: 18px; font-weight: bold; line-height: 30px; color: black; margin-top: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); }
             .right-panel .reset-button { display: none; margin-top: 10px; padding: 6px; font-size: 16px; font-weight: bold; background: red; color: white; border: none; border-radius: 5px; cursor: pointer; }
             .right-panel .reset-button:hover { background: darkred; }
+            .floating-reward {
+                position: fixed;
+                left: 50%;
+                top: 60px;
+                transform: translateX(-50%);
+                font-size: 2em;
+                color: #4caf50;
+                font-weight: bold;
+                opacity: 1;
+                pointer-events: none;
+                z-index: 9999;
+                animation: floatUpFade 2s ease-out forwards;
+            }
+            @keyframes floatUpFade {
+                0% { opacity: 1; top: 60px; }
+                80% { opacity: 1; }
+                100% { opacity: 0; top: 10px; }
+            }
         </style>
     </head>
     <body>
@@ -173,7 +190,6 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
             <button id="reset" class="reset-button" onclick="closePanel()">Close</button>
         </div>
         <script>
-            
             let selectedUser = "";
             let songIndex = 0;
             const totalSongs = ${songsCount};
@@ -394,10 +410,21 @@ function getSocialBreakContent(messageIds: { id: string; msg: string; lang: stri
                 if (gameResult === "You Won") {
                     vscode.postMessage({ command: 'awardMoney', amount: 100 });
                 }
-
             }
 
             function closePanel() { vscode.postMessage({ command: 'close' }); }
+
+            window.addEventListener('message', event => {
+                const message = event.data;
+                if (message.command === 'showReward') {
+                    const emoji = '💰';
+                    const rewardEl = document.createElement('div');
+                    rewardEl.textContent = \`+ \${message.amount} units \${emoji}\`;
+                    rewardEl.className = 'floating-reward';
+                    document.body.appendChild(rewardEl);
+                    setTimeout(() => { rewardEl.remove(); }, 2000);
+                }
+            });
         </script>
     </body>
     </html>`;

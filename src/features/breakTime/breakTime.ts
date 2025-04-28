@@ -124,21 +124,27 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     if (isNaN(amount) || amount < 250) {
                         currentPanel.webview.postMessage({ command: 'showError', message: 'Minimum 250 ml required!' });
                     } else {
-                        const reward = 10;
+                        const reward = Math.floor(amount / 25); // 10 units for every 250 ml
                         const updatedMoney = currentMoney + reward;
                         await context.globalState.update('money', updatedMoney);
                         currentPanel.webview.postMessage({ command: 'updateMoney', amount: updatedMoney });
+                        // Show reward immediately
                         currentPanel.webview.postMessage({ command: 'showReward', amount: reward });
+                        // Transition after 2 seconds (animation duration)
                         setTimeout(() => {
                             state.subMode = 'stretchBreak';
                             state.breakProgress = 3;
                             if(currentPanel) {
-                                renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
+                            renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
                             }
-                        }, 900);
+                        }, 2000);
                     }
                     break;
-
+                case 'skipWater':
+                    state.subMode = 'stretchBreak';
+                    state.breakProgress = 3;
+                    renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
+                    break;
                 case 'finishStretch':
                     state.mode = 'choice';
                     state.breakProgress = 4;
