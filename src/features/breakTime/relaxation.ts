@@ -113,7 +113,7 @@ export function getRelaxationContent(subMode?: string): string {
                                 vscode.postMessage({ command: 'submitWater', amount: amount });
                             }
                         }
-                        function skip() { vscode.postMessage({ command: 'submitWater', amount: 250 }); }
+                        function skip() { vscode.postMessage({ command: 'skipWater' }); }
                         window.addEventListener('message', event => {
                             const message = event.data;
                             if (message.command === 'showReward') {
