@@ -1,13 +1,7 @@
 import vscode from 'vscode';
 import os from 'os';
-
+import {getSocialBreakContent} from './breakTime/socialBreak';
 import { getVideoCount } from './breakTime/socialBreak';
-import { getSocialBreakContent } from './breakTime/socialBreak';
-import { exec } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
-
-
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let videoCount = 0;
@@ -637,32 +631,6 @@ async function getGreetingCount()
 
 
 
-/*
-
-async function getVideoCount()
-{
-	const url = "https://animateinput.s3.ap-south-1.amazonaws.com/videocount.txt";
-
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`HTTP error! Status: ${response.status}`);
-		}
-		const text = await response.text();
-		const numberMatch = text.match(/\d+/); // Extract first number from file
-
-		if (numberMatch) {
-			totalSongs = parseInt(numberMatch[0], 10);
-		} else {
-			totalSongs = 0;
-		}
-	} catch (error: any) {
-		vscode.window.showErrorMessage(`Error fetching file: ${error.message}`);
-		totalSongs = 0;
-	}
-}
-	*/
-
 async function fetchAllUsers() {
 
 	const getAllUsersApiURL = "https://w0jnm95oyc.execute-api.ap-south-1.amazonaws.com/animal/userlist";
@@ -738,7 +706,7 @@ async function fetchAndDisplayVideos(context: vscode.ExtensionContext, username?
    
 
 		if (currentPanel) {
-			currentPanel.webview.html = getSocialBreakContent(messageIds.map(item => ({ id: item.id, msg: item.msg, lang:item.lang })), watchedVideos, username || "Guest", totalSongs);
+			currentPanel.webview.html = getSocialBreakContent(messageIds.map(item => ({ id: item.id, msg: item.msg, lang:item.lang })), watchedVideos, username || "Guest", totalSongs, "reset");
 		}
 		
 		currentPanel.webview.onDidReceiveMessage(            
@@ -767,7 +735,7 @@ async function fetchAndDisplayVideos(context: vscode.ExtensionContext, username?
 						currentPanel = vscode.window.createWebviewPanel('Break-Time', 'Break-Time', vscode.ViewColumn.One, { enableScripts: true });
 					}
 					if (currentPanel) {
-						currentPanel.webview.html = getSocialBreakContent(messageIds.map(item => ({ id: item.id, msg: item.msg, lang:item.lang })), watchedVideos, username || "Guest", totalSongs);
+						currentPanel.webview.html = getSocialBreakContent(messageIds.map(item => ({ id: item.id, msg: item.msg, lang:item.lang })), watchedVideos, username || "Guest", totalSongs, "reset");
 					}
 				}
 
