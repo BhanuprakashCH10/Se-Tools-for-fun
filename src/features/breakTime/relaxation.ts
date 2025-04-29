@@ -11,12 +11,10 @@ export function getRelaxationContent(subMode?: string): string {
                     <p>Your eyes work hard staring at screens all day. Take a short break!</p>
                     <div class="button-group">
                         <button class="primary" onclick="startEyeTimer()">Start 20s Eye Rest</button>
-                        <button onclick="skip()">Skip</button>
                     </div>
                     <script>
                         const vscode = acquireVsCodeApi();
                         function startEyeTimer() { vscode.postMessage({ command: 'startEyeTimer' }); }
-                        function skip() { vscode.postMessage({ command: 'nextAfterEyeTimer' }); }
                     </script>
                 </div>
             `;
@@ -27,7 +25,7 @@ export function getRelaxationContent(subMode?: string): string {
                     <div class="timer pulse" id="timer">20s</div>
                     <p id="randomMessage">Relax and let your eyes rest...</p>
                     <div class="button-group">
-                        <button onclick="skip()">Skip</button>
+                        <!-- Skip button removed -->
                     </div>
                     <script>
                         const messages = [
@@ -55,10 +53,6 @@ export function getRelaxationContent(subMode?: string): string {
                                 document.querySelector('.button-group').innerHTML = '<button class="primary" onclick="next()">Next</button>';
                             }
                         }, 1000);
-                        function skip() {
-                            clearInterval(interval);
-                            vscode.postMessage({ command: 'nextAfterEyeTimer' });
-                        }
                         function next() {
                             clearInterval(interval);
                             vscode.postMessage({ command: 'nextAfterEyeTimer' });
@@ -98,7 +92,6 @@ export function getRelaxationContent(subMode?: string): string {
                     <p id="error" class="error-message"></p>
                     <div class="button-group">
                         <button class="primary" onclick="submitWater()">Submit</button>
-                        <button onclick="skip()">Skip</button>
                     </div>
                     <script>
                         const vscode = acquireVsCodeApi();
@@ -113,16 +106,20 @@ export function getRelaxationContent(subMode?: string): string {
                                 vscode.postMessage({ command: 'submitWater', amount: amount });
                             }
                         }
-                        function skip() { vscode.postMessage({ command: 'skipWater' }); }
                         window.addEventListener('message', event => {
                             const message = event.data;
                             if (message.command === 'showReward') {
-                                const emoji = '💰';
+                                const emoji = '✨';
                                 const rewardEl = document.createElement('div');
-                                rewardEl.textContent = \`+ \${message.amount} units \${emoji}\`;
+                                rewardEl.textContent = \`+ \${message.amount} points \${emoji}\`;
                                 rewardEl.className = 'floating-reward';
                                 document.body.appendChild(rewardEl);
                                 setTimeout(() => { rewardEl.remove(); }, 2000);
+                            }
+                            if (message.command === 'updateAuraPoints') {
+                                document.querySelectorAll('.aura-points-value').forEach(el => {
+                                    el.textContent = message.amount + ' points';
+                                });
                             }
                         });
                     </script>
@@ -142,7 +139,7 @@ export function getRelaxationContent(subMode?: string): string {
                         <div class="tip">💡 Twist your torso</div>
                     </div>
                     <div class="button-group">
-                        <button onclick="skip()">Skip</button>
+                        <!-- Skip button removed -->
                     </div>
                     <script>
                         const vscode = acquireVsCodeApi();
@@ -162,10 +159,6 @@ export function getRelaxationContent(subMode?: string): string {
                                 }
                             }, 1000);
                         }
-                        function skip() {
-                            if (interval) clearInterval(interval);
-                            vscode.postMessage({ command: 'finishStretch' });
-                        }
                         function finish() {
                             if (interval) clearInterval(interval);
                             vscode.postMessage({ command: 'finishStretch' });
@@ -178,12 +171,13 @@ export function getRelaxationContent(subMode?: string): string {
     }
 }
 
-export function getRelaxationPage(state: State): string {
+export function getRelaxationPage(state: State, auraPoints: number): string {
     return `
         <!DOCTYPE html>
         <html>
         <head><meta charset="UTF-8"><style>${getCommonStyles()}</style></head>
         <body>
+            <div class="progress">Aura Points: <span class="aura-points-value">${auraPoints} points</span></div>
             ${getProgressBar(state.breakProgress, state.totalSteps)}
             ${getRelaxationContent(state.subMode)}
         </body>

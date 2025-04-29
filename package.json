@@ -1,22 +1,21 @@
 {
   "name": "codebuddy",
   "displayName": "Code Buddy",
-  "publisher": "SE-tool-for-fun", 
   "description": "Take a small break to connect with friends and relax for better productivity. Also, roast your code with brutal sarcasm and emojis. Additionally, track compilation errors and view statistics.",
-  "version": "0.2.0",
+  "version": "0.0.4",
   "engines": {
     "vscode": "^1.98.0"
   },
   "categories": [
     "Other"
   ],
-  "repository": {
-  "type": "git",
-  "url": "https://github.com/BhanuprakashCH10/Se-Tools-for-fun.git"
-},
   "activationEvents": [
     "onStartupFinished",
+    "onCommand:extension.takeABreak",
     "onCommand:extension.roastCode",
+    "onCommand:extension.countCompilationDetails",
+    "onCommand:extension.retrieveLastCompilationDetails",
+    "onCommand:extension.clearSpecificWorkspaceState",
     "onCommand:extension.openChatbot"
   ],
   "main": "./out/extension.js",
@@ -31,20 +30,12 @@
         "title": "Roast Thy Code"
       },
       {
-        "command": "extension.analyzeJavaCodeSmell",
-        "title": "Analyze Java Code Smell"
-      },
-      {
         "command": "extension.countCompilationDetails",
         "title": "Count Compilation Errors"
       },
       {
         "command": "extension.retrieveLastCompilationDetails",
         "title": "Retrieve Compilation Details"
-      },
-      {
-        "command": "extension.Appreciate",
-        "title": "Appreciate Your Team Members"
       },
       {
         "command": "extension.clearSpecificWorkspaceState",
