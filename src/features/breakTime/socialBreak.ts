@@ -430,7 +430,7 @@ export function getSocialBreakContent(messageIds: { id: string; msg: string; lan
                 document.querySelectorAll('.button').forEach(button => button.classList.add('disabled'));
 
                 if (gameResult === "You Won") {
-                    vscode.postMessage({ command: 'awardMoney', amount: 100 });
+                    vscode.postMessage({ command: 'awardPoints', amount: 100 });
                 }
             }
             function toggleInstructions() {
