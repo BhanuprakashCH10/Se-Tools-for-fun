@@ -1,11 +1,12 @@
-import * as vscode from 'vscode';
+import * as fs from 'fs';
 import * as path from 'path';
-import { State } from './breakTime';
+import * as vscode from 'vscode';
 import { getCommonStyles } from './utils';
+import { State } from './breakTime';
 
-export function getRandomMemes(folderPath: string, memeFiles: string[], count: number): vscode.Uri[] {
-    const shuffled = [...memeFiles].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count).map(file => vscode.Uri.file(path.join(folderPath, file)));
+export function getRandomMemes(memesFolderPath: string, memeFiles: string[], count: number): vscode.Uri[] {
+    const shuffled = memeFiles.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, Math.min(count, shuffled.length)).map(file => vscode.Uri.file(path.join(memesFolderPath, file)));
 }
 
 export function getMemeViewerPage(state: State, auraPoints: number, panel: vscode.WebviewPanel, memesFolderPath: string): string {
@@ -13,26 +14,61 @@ export function getMemeViewerPage(state: State, auraPoints: number, panel: vscod
     return `
         <!DOCTYPE html>
         <html>
-        <head><meta charset="UTF-8"><style>${getCommonStyles()}</style></head>
+        <head><meta charset="UTF-8"><style>${getCommonStyles()}
+        .floating-reward { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); font-size: 2em; color: #4caf50; font-weight: bold; opacity: 1; pointer-events: none; z-index: 9999; animation: floatUpFade 2s ease-out forwards; }
+        .floating-deduction { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); font-size: 2em; color: #ff0000; font-weight: bold; opacity: 1; pointer-events: none; z-index: 9999; animation: floatUpFade 2s ease-out forwards; }
+        @keyframes floatUpFade { 0% { opacity: 1; top: 60px; } 80% { opacity: 1; } 100% { opacity: 0; top: 10px; } }
+        img { max-width: 100%; max-height: 70vh; object-fit: contain; }
+        </style></head>
         <body>
-            <div class="container meme-container">
-                <div class="progress">Meme ${state.currentIndex + 1} of ${state.selectedMemes.length} | Aura Points: <span class="aura-points-value">${auraPoints} points</span></div>
-                <img src="${memeUri}" class="meme-image"/>
+            <div class="container">
+                <h1>😂 Meme Break</h1>
+                <p>Current Aura Points:<span class="aura-points-value"> ${auraPoints} points</span></p>
+                <img src="${memeUri}" alt="Meme"/>
                 <div class="button-group">
                     <button class="primary" onclick="nextMeme()">Next Meme</button>
                     <button onclick="closePanel()">Close</button>
                 </div>
+                <p id="error" class="error-message"></p>
             </div>
             <script>
                 const vscode = acquireVsCodeApi();
+                function showFloatingReward(amount) {
+                    const emoji = '✨';
+                    const rewardEl = document.createElement('div');
+                    rewardEl.textContent = \`+ \${amount} points \${emoji}\`;
+                    rewardEl.className = 'floating-reward';
+                    document.body.appendChild(rewardEl);
+                    setTimeout(() => { rewardEl.remove(); }, 2000);
+                }
+                function showFloatingDeduction(amount) {
+                    const emoji = '💸';
+                    const deductionEl = document.createElement('div');
+                    deductionEl.textContent = \`- \${amount} points \${emoji}\`;
+                    deductionEl.className = 'floating-deduction';
+                    document.body.appendChild(deductionEl);
+                    setTimeout(() => { deductionEl.remove(); }, 2000);
+                }
                 function nextMeme() { vscode.postMessage({ command: 'nextMeme' }); }
-                function closePanel() { vscode.postMessage({ command: 'close' }); }
+                function closePanel() { vscode.postMessage({ command: 'closeMemes' }); }
                 window.addEventListener('message', event => {
                     const message = event.data;
                     if (message.command === 'updateAuraPoints') {
                         document.querySelectorAll('.aura-points-value').forEach(el => {
                             el.textContent = message.amount + ' points';
                         });
+                    }
+                    if (message.command === 'showReward') {
+                        showFloatingReward(message.amount);
+                    }
+                    if (message.command === 'showDeduction') {
+                        showFloatingDeduction(message.amount);
+                    }
+                    if (message.command === 'showError') {
+                        const errorEl = document.getElementById('error');
+                        errorEl.textContent = message.message;
+                        errorEl.style.display = 'block';
+                        setTimeout(() => errorEl.style.display = 'none', 3000);
                     }
                 });
             </script>
@@ -42,38 +78,64 @@ export function getMemeViewerPage(state: State, auraPoints: number, panel: vscod
 }
 
 export function getMemeChoicePage(state: State, auraPoints: number): string {
+    const memeCost = vscode.workspace.getConfiguration('memeBreak').get<number>('memeCost', 50);
+    const viewMoreDisabled = state.memesViewed >= 10 ? 'disabled' : '';
     return `
         <!DOCTYPE html>
         <html>
-        <head><meta charset="UTF-8"><style>${getCommonStyles()}</style></head>
+        <head><meta charset="UTF-8"><style>${getCommonStyles()}
+        .floating-reward { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); font-size: 2em; color: #4caf50; font-weight: bold; opacity: 1; pointer-events: none; z-index: 9999; animation: floatUpFade 2s ease-out forwards; }
+        .floating-deduction { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); font-size: 2em; color: #ff0000; font-weight: bold; opacity: 1; pointer-events: none; z-index: 9999; animation: floatUpFade 2s ease-out forwards; }
+        @keyframes floatUpFade { 0% { opacity: 1; top: 60px; } 80% { opacity: 1; } 100% { opacity: 0; top: 10px; } }
+        </style></head>
         <body>
             <div class="container">
-                <h1>🎉 Meme Break is Done!</h1>
+                <h1>😄 More Memes?</h1>
                 <p>Current Aura Points:<span class="aura-points-value"> ${auraPoints} points</span></p>
-                <p>You've viewed ${state.memeLimit} memes. What would you like to do?</p>
                 <div class="button-group">
-                    ${state.memeRound === 1 ? '<button class="primary" onclick="viewMoreMemes()">5 More Memes (150 points)</button>' : ''}
-                    <button class="primary" onclick="closeMemes()">Close</button>
+                    <button class="primary" onclick="viewMoreMemes()" ${viewMoreDisabled}>View More Memes (${memeCost} points)</button>
+                    <button onclick="closePanel()">Close</button>
                 </div>
-                ${state.memeRound === 2 ? '<p>You had enough! Time to get back to work!</p>' : ''}
                 <p id="error" class="error-message"></p>
             </div>
             <script>
                 const vscode = acquireVsCodeApi();
+                function showFloatingReward(amount) {
+                    const emoji = '✨';
+                    const rewardEl = document.createElement('div');
+                    rewardEl.textContent = \`+ \${amount} points \${emoji}\`;
+                    rewardEl.className = 'floating-reward';
+                    document.body.appendChild(rewardEl);
+                    setTimeout(() => { rewardEl.remove(); }, 2000);
+                }
+                function showFloatingDeduction(amount) {
+                    const emoji = '💸';
+                    const deductionEl = document.createElement('div');
+                    deductionEl.textContent = \`- \${amount} points \${emoji}\`;
+                    deductionEl.className = 'floating-deduction';
+                    document.body.appendChild(deductionEl);
+                    setTimeout(() => { deductionEl.remove(); }, 2000);
+                }
                 function viewMoreMemes() { vscode.postMessage({ command: 'viewMoreMemes' }); }
-                function closeMemes() { vscode.postMessage({ command: 'closeMemes' }); }
+                function closePanel() { vscode.postMessage({ command: 'closeMemes' }); }
                 window.addEventListener('message', event => {
                     const message = event.data;
+                    if (message.command === 'updateAuraPoints') {
+                        document.querySelectorAll('.aura-points-value').forEach(el => {
+                            el.textContent = message.amount + ' points';
+                        });
+                    }
+                    if (message.command === 'showReward') {
+                        showFloatingReward(message.amount);
+                    }
+                    if (message.command === 'showDeduction') {
+                        showFloatingDeduction(message.amount);
+                    }
                     if (message.command === 'showError') {
                         const errorEl = document.getElementById('error');
                         errorEl.textContent = message.message;
                         errorEl.style.display = 'block';
                         setTimeout(() => errorEl.style.display = 'none', 3000);
-                    }
-                    if (message.command === 'updateAuraPoints') {
-                        document.querySelectorAll('.aura-points-value').forEach(el => {
-                            el.textContent = message.amount + ' points';
-                        });
                     }
                 });
             </script>
@@ -86,23 +148,56 @@ export function getBreakLimitPage(state: State, auraPoints: number): string {
     return `
         <!DOCTYPE html>
         <html>
-        <head><meta charset="UTF-8"><style>${getCommonStyles()}</style></head>
+        <head><meta charset="UTF-8"><style>${getCommonStyles()}
+        .floating-reward { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); font-size: 2em; color: #4caf50; font-weight: bold; opacity: 1; pointer-events: none; z-index: 9999; animation: floatUpFade 2s ease-out forwards; }
+        .floating-deduction { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); font-size: 2em; color: #ff0000; font-weight: bold; opacity: 1; pointer-events: none; z-index: 9999; animation: floatUpFade 2s ease-out forwards; }
+        @keyframes floatUpFade { 0% { opacity: 1; top: 60px; } 80% { opacity: 1; } 100% { opacity: 0; top: 10px; } }
+        </style></head>
         <body>
             <div class="container">
-                <h1>⏰ Break Over</h1>
+                <h1>🚫 Meme Limit Reached</h1>
                 <p>Current Aura Points:<span class="aura-points-value"> ${auraPoints} points</span></p>
-                <p>You've viewed ${state.memeLimit * (state.memeRound === 2 ? 2 : 1)} memes. That's enough</p>
-                <button onclick="closePanel()">Get Back To Work</button>
+                <p>You've reached the meme limit for this break!</p>
+                <button onclick="closePanel()">Close</button>
+                <p id="error" class="error-message"></p>
             </div>
             <script>
                 const vscode = acquireVsCodeApi();
-                function closePanel() { vscode.postMessage({ command: 'close' }); }
+                function showFloatingReward(amount) {
+                    const emoji = '✨';
+                    const rewardEl = document.createElement('div');
+                    rewardEl.textContent = \`+ \${amount} points \${emoji}\`;
+                    rewardEl.className = 'floating-reward';
+                    document.body.appendChild(rewardEl);
+                    setTimeout(() => { rewardEl.remove(); }, 2000);
+                }
+                function showFloatingDeduction(amount) {
+                    const emoji = '💸';
+                    const deductionEl = document.createElement('div');
+                    deductionEl.textContent = \`- \${amount} points \${emoji}\`;
+                    deductionEl.className = 'floating-deduction';
+                    document.body.appendChild(deductionEl);
+                    setTimeout(() => { deductionEl.remove(); }, 2000);
+                }
+                function closePanel() { vscode.postMessage({ command: 'closeMemes' }); }
                 window.addEventListener('message', event => {
                     const message = event.data;
                     if (message.command === 'updateAuraPoints') {
                         document.querySelectorAll('.aura-points-value').forEach(el => {
                             el.textContent = message.amount + ' points';
                         });
+                    }
+                    if (message.command === 'showReward') {
+                        showFloatingReward(message.amount);
+                    }
+                    if (message.command === 'showDeduction') {
+                        showFloatingDeduction(message.amount);
+                    }
+                    if (message.command === 'showError') {
+                        const errorEl = document.getElementById('error');
+                        errorEl.textContent = message.message;
+                        errorEl.style.display = 'block';
+                        setTimeout(() => errorEl.style.display = 'none', 3000);
                     }
                 });
             </script>

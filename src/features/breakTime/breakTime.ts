@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import os from 'os';
 import { getRelaxationPage } from './relaxation';
 import { getMemeViewerPage, getMemeChoicePage, getBreakLimitPage, getRandomMemes } from './memeViewer';
-import { fetchAndDisplayVideos, registerUser} from './socialBreak';
+import { fetchAndDisplayVideos, registerUser } from './socialBreak';
 import { getCommonStyles } from './utils';
 
 let currentPanel: vscode.WebviewPanel | undefined;
@@ -17,8 +17,7 @@ export function activateBreakTime(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('memeBreak');
     const intervalMinutes = config.get<number>('intervalMinutes', 10);
     const snoozeMinutes = config.get<number>('snoozeMinutes', 5);
-    const memeLimit = config.get<number>('memeLimit', 5);
-    const interval = intervalMinutes * 1000; // Convert to milliseconds
+    const interval = intervalMinutes * 60 * 1000; // Convert to milliseconds
 
     let breakTimer: NodeJS.Timeout | undefined;
 
@@ -28,7 +27,7 @@ export function activateBreakTime(context: vscode.ExtensionContext) {
             const username = os.userInfo().username.replace(/\s+/g, "");
             const auraPoints = context.globalState.get<number>(`auraPoints_${username}`, 0);
             if (auraPoints < 0) {
-                vscode.window.showInformationMessage('Cannot take a break: Aura Points are negative. Work to earn more!');
+                vscode.window.showInformationMessage('Cannot take a break: You have Negative Aura. Work to earn more!');
                 return;
             }
             isBreakActive = true;
@@ -37,7 +36,7 @@ export function activateBreakTime(context: vscode.ExtensionContext) {
                     isBreakActive = false;
                     if (selection === 'Take Break') {
                         if (currentPanel) { currentPanel.dispose(); }
-                        showBreakWebview(context, memeLimit);
+                        showBreakWebview(context);
                     } else if (selection === 'Snooze') {
                         if (breakTimer) { clearInterval(breakTimer); }
                         setTimeout(startTimer, snoozeMinutes * 60 * 1000);
@@ -112,8 +111,6 @@ export function activateBreakTime(context: vscode.ExtensionContext) {
 }
 
 function takeBreakCommand(context: vscode.ExtensionContext) {
-    const config = vscode.workspace.getConfiguration('memeBreak');
-    const memeLimit = config.get<number>('memeLimit', 5);
     const username = os.userInfo().username.replace(/\s+/g, "");
     const auraPoints = context.globalState.get<number>(`auraPoints_${username}`, 0);
 
@@ -128,7 +125,7 @@ function takeBreakCommand(context: vscode.ExtensionContext) {
     }
 
     isBreakActive = true;
-    showBreakWebview(context, memeLimit).finally(() => {
+    showBreakWebview(context).finally(() => {
         isBreakActive = false;
     });
 }
@@ -184,9 +181,10 @@ function skipActivityCommand(context: vscode.ExtensionContext) {
         case 'memeViewer':
         case 'memeChoice':
         case 'socialBreak':
-            deductBreakTimePoints(context, state.username, state.breakStartTime);
-            currentPanel.dispose();
-            vscode.window.showInformationMessage('Skipped activity and closed break.');
+        case 'appreciate':
+            state.mode = 'choice';
+            renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
+            vscode.window.showInformationMessage('Returned to choice page.');
             break;
         default:
             vscode.window.showInformationMessage('No activity to skip.');
@@ -209,6 +207,7 @@ function addAuraPointsCommand(context: vscode.ExtensionContext) {
 
 function deductAuraPoints(context: vscode.ExtensionContext, username: string, points: number) {
     let auraPoints = context.globalState.get<number>(`auraPoints_${username}`, 0);
+    const isDeduction = points > 0;
     auraPoints -= points;
     context.globalState.update(`auraPoints_${username}`, auraPoints);
     if (auraPoints < 0) {
@@ -228,7 +227,7 @@ function deductBreakTimePoints(context: vscode.ExtensionContext, username: strin
 }
 
 export interface State {
-    mode: 'relaxation' | 'choice' | 'memeViewer' | 'socialBreak' | 'memeChoice';
+    mode: 'relaxation' | 'choice' | 'memeViewer' | 'socialBreak' | 'memeChoice' | 'appreciate';
     subMode?: 'eyeIntro' | 'eyeTimer' | 'waterBreak' | 'stretchBreak';
     memeLimit: number;
     currentIndex: number;
@@ -240,9 +239,12 @@ export interface State {
     gamePlayed: boolean;
     memeRound: number;
     breakStartTime: number;
+    memesViewed: number;
 }
 
-async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: number) {
+async function showBreakWebview(context: vscode.ExtensionContext) {
+    const config = vscode.workspace.getConfiguration('memeBreak');
+    const memeLimit = config.get<number>('memeLimit', 5);
     const memesFolderPath = path.join(context.extensionPath, 'src', 'memes');
     let memeFiles: string[] = [];
     const username = os.userInfo().username.replace(/\s+/g, "");
@@ -269,7 +271,7 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
         if (success) {
             usersList.push(username);
             await context.globalState.update("usersList", usersList);
-            await context.globalState.update(`auraPoints_${username}`, 0); // Initialize Aura Points
+            await context.globalState.update(`auraPoints_${username}`, 0);
         }
     }
 
@@ -289,8 +291,9 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
 
         currentPanel.webview.onDidReceiveMessage(async message => {
             if (!currentPanel) { return; }
+            const state: State = (currentPanel as any)._state;
             const auraPoints = context.globalState.get<number>(`auraPoints_${state.username}`, 0);
-            const memeCost = 150;
+            const memeCost = config.get<number>('memeCost', 50);
 
             switch (message.command) {
                 case 'startEyeTimer':
@@ -310,8 +313,8 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     if (isNaN(amount) || amount < 250) {
                         currentPanel.webview.postMessage({ command: 'showError', message: 'Minimum 250 ml required!' });
                     } else {
-                        const reward = Math.floor(amount / 25); // 10 Aura Points per 250 ml
-                        const updatedPoints = deductAuraPoints(context, state.username, -reward); // Add points
+                        const reward = Math.floor(amount / 25);
+                        const updatedPoints = deductAuraPoints(context, state.username, -reward);
                         currentPanel.webview.postMessage({ command: 'updateAuraPoints', amount: updatedPoints });
                         currentPanel.webview.postMessage({ command: 'showReward', amount: reward });
                         setTimeout(() => {
@@ -334,23 +337,23 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     if (auraPoints >= memeCost) {
                         const updatedPoints = deductAuraPoints(context, state.username, memeCost);
                         currentPanel.webview.postMessage({ command: 'updateAuraPoints', amount: updatedPoints });
+                        currentPanel.webview.postMessage({ command: 'showDeduction', amount: memeCost });
                         state.mode = 'memeViewer';
                         state.selectedMemes = getRandomMemes(memesFolderPath, memeFiles, state.memeLimit);
                         state.currentIndex = 0;
                         state.memeRound = 1;
+                        state.memesViewed += state.memeLimit;
                         renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
                     } else {
-                        currentPanel.webview.postMessage({ command: 'showError', message: 'Not enough Aura Points to view memes! Need 150 points.' });
+                        currentPanel.webview.postMessage({ command: 'showError', message: `Not enough Aura Points to view memes! Need ${memeCost} points.` });
                     }
                     break;
 
                 case 'nextMeme':
                     if (state.currentIndex + 1 < state.selectedMemes.length) {
                         state.currentIndex++;
-                        const updatedPoints = deductAuraPoints(context, state.username, memeCost);
-                        currentPanel.webview.postMessage({ command: 'updateAuraPoints', amount: updatedPoints });
                         renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
-                    } else if (state.memeRound === 1) {
+                    } else if (state.memeRound === 1 && state.memesViewed < 10) {
                         state.mode = 'memeChoice';
                         renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
                     } else {
@@ -359,22 +362,27 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     break;
 
                 case 'viewMoreMemes':
-                    if (auraPoints >= memeCost) {
+                    if (auraPoints >= memeCost && state.memesViewed < 10) {
                         const updatedPoints = deductAuraPoints(context, state.username, memeCost);
                         currentPanel.webview.postMessage({ command: 'updateAuraPoints', amount: updatedPoints });
+                        currentPanel.webview.postMessage({ command: 'showDeduction', amount: memeCost });
                         state.mode = 'memeViewer';
                         state.selectedMemes = getRandomMemes(memesFolderPath, memeFiles, state.memeLimit);
                         state.currentIndex = 0;
                         state.memeRound = 2;
+                        state.memesViewed += state.memeLimit;
                         renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
+                    } else if (state.memesViewed >= 10) {
+                        currentPanel.webview.html = getBreakLimitPage(state, auraPoints);
                     } else {
-                        currentPanel.webview.postMessage({ command: 'showError', message: 'Not enough Aura Points to view more memes! Need 150 points.' });
+                        currentPanel.webview.postMessage({ command: 'showError', message: `Not enough Aura Points to view more memes! Need ${memeCost} points.` });
                     }
                     break;
 
                 case 'closeMemes':
-                    deductBreakTimePoints(context, state.username, state.breakStartTime);
-                    currentPanel.dispose();
+                case 'close':
+                    state.mode = 'choice';
+                    renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
                     break;
 
                 case 'startSocialBreak':
@@ -383,13 +391,20 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     await fetchAndDisplayVideos(currentPanel, state, context, username);
                     break;
 
+                case 'startAppreciate':
+                    state.mode = 'appreciate';
+                    vscode.commands.executeCommand('extension.Appreciate');
+                    state.mode = 'choice';
+                    renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
+                    break;
+
                 case 'playVideo':
                     state.watchedVideos.add(message.selectedId);
                     await context.globalState.update("watchedVideos", Array.from(state.watchedVideos));
                     break;
 
                 case 'awardPoints':
-                    const newPoints = deductAuraPoints(context, state.username, -message.amount); // Add points
+                    const newPoints = deductAuraPoints(context, state.username, -message.amount);
                     currentPanel.webview.postMessage({ command: 'updateAuraPoints', amount: newPoints });
                     setTimeout(() => {
                         currentPanel?.webview.postMessage({ command: 'showReward', amount: message.amount });
@@ -413,15 +428,8 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
                     break;
 
                 case 'reset':
-                    deductBreakTimePoints(context, state.username, state.breakStartTime);
-                    if (currentPanel) { currentPanel.reveal(vscode.ViewColumn.One); }
-                    else { currentPanel = vscode.window.createWebviewPanel('mindfulBreak', 'Mindful Break', vscode.ViewColumn.One, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [vscode.Uri.file(memesFolderPath)] }); }
-                    if (currentPanel) { await fetchAndDisplayVideos(currentPanel, state, context, username); }
-                    break;
-
-                case 'close':
-                    deductBreakTimePoints(context, state.username, state.breakStartTime);
-                    currentPanel.dispose();
+                    state.mode = 'choice';
+                    renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
                     break;
             }
         });
@@ -446,10 +454,11 @@ async function showBreakWebview(context: vscode.ExtensionContext, memeLimit: num
         watchedVideos: new Set(context.globalState.get<string[]>("watchedVideos", [])),
         gamePlayed: false,
         memeRound: 1,
-        breakStartTime: Date.now()
+        breakStartTime: Date.now(),
+        memesViewed: 0
     };
 
-    (currentPanel as any)._state = state; // Store state for skip command
+    (currentPanel as any)._state = state;
     if (currentPanel) {
         renderPage(currentPanel, state, context, memesFolderPath, memeFiles);
     }
@@ -473,10 +482,15 @@ function renderPage(panel: vscode.WebviewPanel, state: State, context: vscode.Ex
         case 'socialBreak':
             // Handled in fetchAndDisplayVideos
             break;
+        case 'appreciate':
+            panel.webview.html = getChoicePage(state, auraPoints);
+            break;
     }
 }
 
 function getChoicePage(state: State, auraPoints: number): string {
+    const memeCost = vscode.workspace.getConfiguration('memeBreak').get<number>('memeCost', 50);
+    const viewMemesDisabled = state.memesViewed >= 10 ? 'disabled' : '';
     return `
         <!DOCTYPE html>
         <html>
@@ -488,6 +502,19 @@ function getChoicePage(state: State, auraPoints: number): string {
             transform: translateX(-50%);
             font-size: 2em;
             color: #4caf50;
+            font-weight: bold;
+            opacity: 1;
+            pointer-events: none;
+            z-index: 9999;
+            animation: floatUpFade 2s ease-out forwards;
+        }
+        .floating-deduction {
+            position: fixed;
+            left: 50%;
+            top: 60px;
+            transform: translateX(-50%);
+            font-size: 2em;
+            color: #ff0000;
             font-weight: bold;
             opacity: 1;
             pointer-events: none;
@@ -506,8 +533,9 @@ function getChoicePage(state: State, auraPoints: number): string {
                 <p>Current Aura Points:<span class="aura-points-value"> ${auraPoints} points</span></p>
                 <p>Choose an activity:</p>
                 <div class="button-group">
-                    <button class="primary" onclick="startMemes()">View Memes (150 points)</button>
+                    <button class="primary" onclick="startMemes()" ${viewMemesDisabled}>View Memes (${memeCost} points)</button>
                     <button class="primary" onclick="startSocialBreak()">Social Break</button>
+                    <button class="primary" onclick="startAppreciate()">Appreciate Your Friends</button>
                     <button onclick="closePanel()">Back to Work</button>
                 </div>
                 <p id="error" class="error-message"></p>
@@ -517,13 +545,22 @@ function getChoicePage(state: State, auraPoints: number): string {
                 function showFloatingReward(amount) {
                     const emoji = '✨';
                     const rewardEl = document.createElement('div');
-                    rewardEl.textContent = \`+ \${amount} points \${emoji}\`;
+                    rewardEl.textContent = \`+ \${amount} Aura \${emoji}\`;
                     rewardEl.className = 'floating-reward';
                     document.body.appendChild(rewardEl);
                     setTimeout(() => { rewardEl.remove(); }, 2000);
                 }
+                function showFloatingDeduction(amount) {
+                    const emoji = '💸';
+                    const deductionEl = document.createElement('div');
+                    deductionEl.textContent = \`- \${amount} Aura \${emoji}\`;
+                    deductionEl.className = 'floating-deduction';
+                    document.body.appendChild(deductionEl);
+                    setTimeout(() => { deductionEl.remove(); }, 2000);
+                }
                 function startMemes() { vscode.postMessage({ command: 'startMemes' }); }
                 function startSocialBreak() { vscode.postMessage({ command: 'startSocialBreak' }); }
+                function startAppreciate() { vscode.postMessage({ command: 'startAppreciate' }); }
                 function closePanel() { vscode.postMessage({ command: 'close' }); }
                 window.addEventListener('message', event => {
                     const message = event.data;
@@ -534,6 +571,9 @@ function getChoicePage(state: State, auraPoints: number): string {
                     }
                     if (message.command === 'showReward') {
                         showFloatingReward(message.amount);
+                    }
+                    if (message.command === 'showDeduction') {
+                        showFloatingDeduction(message.amount);
                     }
                     if (message.command === 'showError') {
                         const errorEl = document.getElementById('error');

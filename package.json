@@ -16,15 +16,12 @@
     "onCommand:extension.countCompilationDetails",
     "onCommand:extension.retrieveLastCompilationDetails",
     "onCommand:extension.clearSpecificWorkspaceState",
-    "onCommand:extension.openChatbot"
+    "onCommand:extension.openChatbot",
+    "onCommand:extension.Appreciate"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-      {
-        "command": "extension.takeABreak",
-        "title": "Take a Break"
-      },
       {
         "command": "extension.roastCode",
         "title": "Roast Thy Code"
@@ -44,6 +41,26 @@
       {
         "command": "extension.openChatbot",
         "title": "Open Chatbot"
+      },
+      {
+        "command": "memeBreak.takeBreak",
+        "title": "Take a Break"
+      },
+      {
+        "command": "memeBreak.skipActivity",
+        "title": "Meme Break: Skip Activity"
+      },
+      {
+        "command": "memeBreak.checkAuraPoints",
+        "title": "Check Aura Points"
+      },
+      {
+        "command": "memeBreak.addAuraPoints",
+        "title": "Add Aura Points"
+      },
+      {
+        "command": "extension.Appreciate",
+        "title": "Appreciate Your Friends"
       }
     ],
     "configuration": {
@@ -66,8 +83,8 @@
         },
         "memeBreak.memeCost": {
           "type": "number",
-          "default": 1000,
-          "description": "Cost per meme viewed."
+          "default": 100,
+          "description": "Cost to open the meme viewer."
         }
       }
     }
