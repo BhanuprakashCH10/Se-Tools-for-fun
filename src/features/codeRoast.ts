@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import axios from 'axios';
 
 // Constants
-const GEMINI_API_KEY = "AIzaSyBWX_ffYY-ijlomFKYb5q1fRgZ2hubEUac";
+const GEMINI_API_KEY = "AIzaSyDH7gI4lxFpj5tJob6PQ6tiqGped6fsiqw";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent";
 const roastDiagnostics = vscode.languages.createDiagnosticCollection("roast");
 
