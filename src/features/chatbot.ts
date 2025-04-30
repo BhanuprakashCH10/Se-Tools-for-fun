@@ -19,7 +19,7 @@ export class Chatbot {
         if (!this.panel) {
             this.panel = vscode.window.createWebviewPanel(
                 'chatbot',
-                'Chat with Gemini',
+                'Chat with your Buddy',
                 vscode.ViewColumn.Beside,
                 {
                     enableScripts: true,
@@ -36,6 +36,8 @@ export class Chatbot {
                         await this.sendMessageToApi(message.content);
                     }else if (message.type === 'closeChat') {
                         this.panel?.dispose();
+                    }else if (message.type === 'roastCode') {
+                        vscode.commands.executeCommand('extension.roastCode');
                     }
                 },
                 undefined,
@@ -232,6 +234,7 @@ export class Chatbot {
         <footer>
             <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" />
             <button id="send-btn">Send</button>
+            <button id="roast-btn" style="margin-left:10px;background:#ff9800;color:#222;">Roast my code</button>
         </footer>
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script>
@@ -239,6 +242,7 @@ export class Chatbot {
             const chatHistory = document.getElementById('chat-history');
             const input = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
+            const roastBtn = document.getElementById('roast-btn');
 
             window.addEventListener('message', event => {
                 if (event.data.type === 'updateHistory') updateChatHistory(event.data.history);
@@ -247,7 +251,7 @@ export class Chatbot {
             function getAvatar(sender) {
                 return sender === 'user'
                     ? '<div class="avatar">U</div>'
-                    : '<div class="avatar bot">G</div>';
+                    : '<div class="avatar bot">B</div>';
             }
 
             function updateChatHistory(history) {
@@ -287,6 +291,11 @@ export class Chatbot {
                 vscode.postMessage({ type: 'userMessage', content: text });
             }
 
+            roastBtn.addEventListener('click', () => {
+                if (confirm('Do you want to roast your code?')) {
+                    vscode.postMessage({ type: 'roastCode' });
+                }
+            });
             // Focus input on load
             setTimeout(() => input.focus(), 200);
         </script>

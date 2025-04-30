@@ -23,6 +23,14 @@
   "contributes": {
     "commands": [
       {
+        "command": "typingSpeedTracker.togglePanel",
+        "title": "Typing Speed: Toggle Visualizer Panel"
+      },
+      {
+        "command": "typingSpeedTracker.resetStats",
+        "title": "Typing Speed: Reset Statistics"
+      },
+      {
         "command": "extension.roastCode",
         "title": "Roast Thy Code"
       },
@@ -63,32 +71,64 @@
         "title": "Appreciate Your Friends"
       }
     ],
-    "configuration": {
-      "title": "Meme Break",
-      "properties": {
-        "memeBreak.intervalMinutes": {
-          "type": "number",
-          "default": 10,
-          "description": "Interval between break reminders in minutes."
-        },
-        "memeBreak.snoozeMinutes": {
-          "type": "number",
-          "default": 5,
-          "description": "Snooze duration in minutes when postponing a break."
-        },
-        "memeBreak.memeLimit": {
-          "type": "number",
-          "default": 5,
-          "description": "Number of memes to show per break."
-        },
-        "memeBreak.memeCost": {
-          "type": "number",
-          "default": 100,
-          "description": "Cost to open the meme viewer."
+    "configuration": [
+      {
+        "title": "Meme Break",
+        "properties": {
+          "memeBreak.intervalMinutes": {
+            "type": "number",
+            "default": 10,
+            "description": "Interval between break reminders in minutes."
+          },
+          "memeBreak.snoozeMinutes": {
+            "type": "number",
+            "default": 5,
+            "description": "Snooze duration in minutes when postponing a break."
+          },
+          "memeBreak.memeLimit": {
+            "type": "number",
+            "default": 5,
+            "description": "Number of memes to show per break."
+          },
+          "memeBreak.memeCost": {
+            "type": "number",
+            "default": 100,
+            "description": "Cost to open the meme viewer."
+          }
+        }
+      },
+      {
+        "title": "Typing Speed Tracker",
+        "properties": {
+          "typingSpeedTracker.idleTimeThreshold": {
+            "type": "number",
+            "default": 5,
+            "description": "Time in seconds after which typing is considered idle"
+          },
+          "typingSpeedTracker.saveHistory": {
+            "type": "boolean",
+            "default": true,
+            "description": "Save typing speed history between sessions"
+          },
+          "typingSpeedTracker.historyMaxEntries": {
+            "type": "number",
+            "default": 500,
+            "description": "Maximum number of history entries to store"
+          },
+          "typingSpeedTracker.historyGrouping": {
+            "type": "string",
+            "enum": ["minute", "hour", "day"],
+            "default": "hour",
+            "description": "How to group history data points"
+          }
         }
       }
-    }
+    ]
   },
+  "files": [
+    "out",
+    "src/features/typingSpeed/media"
+  ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
