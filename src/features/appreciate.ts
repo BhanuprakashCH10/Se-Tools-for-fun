@@ -12,7 +12,7 @@ let userIds: string[] = [];
 let panel_GT: vscode.WebviewPanel | undefined;
 
 
-export function activateAppreciate(context: vscode.ExtensionContext) {
+export async function activateAppreciate(context: vscode.ExtensionContext) {
     const username = os.userInfo().username.replace(/\s+/g, "");
     senderId = username;
     let sayThanks = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -92,7 +92,7 @@ export function activateAppreciate(context: vscode.ExtensionContext) {
 	  takeAbreakExtension.tooltip = "Take a Break...Relax";
 	  takeAbreakExtension.command = "extension.takeABreak";
 	  takeAbreakExtension.show();
-  
+  	  totalSongs = await getVideoCount();
 	  let getVideoListDisposable = vscode.commands.registerCommand('extension.takeABreak', async () => {
 		  await getVideoCount();
 		  // Fetch all users
