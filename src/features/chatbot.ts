@@ -11,7 +11,7 @@ export class Chatbot {
     private panel: vscode.WebviewPanel | undefined;
     private history: Message[] = [];
     private conversationId: string = Date.now().toString();
-    private static readonly FALLBACK_API_KEY = 'AIzaSyBWX_ffYY-ijlomFKYb5q1fRgZ2hubEUac';
+    private static readonly FALLBACK_API_KEY = 'AIzaSyDH7gI4lxFpj5tJob6PQ6tiqGped6fsiqw';
 
     constructor(private context: vscode.ExtensionContext) {}
 
@@ -19,7 +19,7 @@ export class Chatbot {
         if (!this.panel) {
             this.panel = vscode.window.createWebviewPanel(
                 'chatbot',
-                'Chat with Gemini',
+                'Chat with your Buddy',
                 vscode.ViewColumn.Beside,
                 {
                     enableScripts: true,
@@ -34,8 +34,12 @@ export class Chatbot {
                         this.history.push({ sender: 'user', content: message.content, timestamp });
                         this.updateWebview();
                         await this.sendMessageToApi(message.content);
-                    }else if (message.type === 'closeChat') {
+                    } else if (message.type === 'closeChat') {
                         this.panel?.dispose();
+                    } else if (message.type === 'roastCode') {
+                        vscode.commands.executeCommand('extension.roastCode');
+                    } else if (message.type === 'toggleTypingSpeed') {
+                        vscode.commands.executeCommand('typingSpeedTracker.togglePanel');
                     }
                 },
                 undefined,
@@ -75,7 +79,6 @@ export class Chatbot {
     }
 
     private async sendMessageToApi(userMessage: string) {
-        // Show loading indicator
         const timestamp = new Date().toLocaleTimeString();
         this.history.push({ sender: 'chatbot', content: '...', timestamp });
         this.updateWebview();
@@ -103,16 +106,13 @@ export class Chatbot {
                 { headers: { 'Content-Type': 'application/json' } }
             );
 
-            // Remove loading indicator
             this.history = this.history.filter(msg => !(msg.sender === 'chatbot' && msg.content === '...'));
-
             const chatbotResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text
                 || "Oops, I blanked out. Try again, genius!";
             const newTimestamp = new Date().toLocaleTimeString();
             this.history.push({ sender: 'chatbot', content: chatbotResponse, timestamp: newTimestamp });
             this.updateWebview();
         } catch (error) {
-            // Remove loading indicator
             this.history = this.history.filter(msg => !(msg.sender === 'chatbot' && msg.content === '...'));
             const newTimestamp = new Date().toLocaleTimeString();
             this.history.push({ sender: 'chatbot', content: "*Yikes, something broke! Maybe the internet’s on a coffee break? Try again.*", timestamp: newTimestamp });
@@ -127,7 +127,6 @@ export class Chatbot {
     }
 
     private getWebviewContent(): string {
-        // Copilot-like chat UI with avatars, header, and smooth scroll
         return `<!DOCTYPE html>
         <html lang="en">
         <head>
@@ -137,7 +136,7 @@ export class Chatbot {
             body {
             margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif;
             background: #181b20; color: #d4d4d4; height: 100vh; display: flex; flex-direction: column;
-            max-width: 420px; /* Limit width */
+            max-width: 420px;
             min-width: 320px;
             margin-left: auto; margin-right: auto;
             border-left: 1px solid #23272e;
@@ -232,6 +231,7 @@ export class Chatbot {
         <footer>
             <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" />
             <button id="send-btn">Send</button>
+            <button id="typing-speed-btn" style="background:#0b93f6;color:#fff;">Typing Speed</button>
         </footer>
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script>
@@ -239,6 +239,8 @@ export class Chatbot {
             const chatHistory = document.getElementById('chat-history');
             const input = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
+            const roastBtn = document.getElementById('roast-btn');
+            const typingSpeedBtn = document.getElementById('typing-speed-btn');
 
             window.addEventListener('message', event => {
                 if (event.data.type === 'updateHistory') updateChatHistory(event.data.history);
@@ -247,7 +249,7 @@ export class Chatbot {
             function getAvatar(sender) {
                 return sender === 'user'
                     ? '<div class="avatar">U</div>'
-                    : '<div class="avatar bot">G</div>';
+                    : '<div class="avatar bot">B</div>';
             }
 
             function updateChatHistory(history) {
@@ -287,7 +289,16 @@ export class Chatbot {
                 vscode.postMessage({ type: 'userMessage', content: text });
             }
 
-            // Focus input on load
+            roastBtn.addEventListener('click', () => {
+                if (confirm('Do you want to roast your code?')) {
+                    vscode.postMessage({ type: 'roastCode' });
+                }
+            });
+
+            typingSpeedBtn.addEventListener('click', () => {
+                vscode.postMessage({ type: 'toggleTypingSpeed' });
+            });
+
             setTimeout(() => input.focus(), 200);
         </script>
         </body>

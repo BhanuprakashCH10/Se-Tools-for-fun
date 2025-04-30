@@ -399,6 +399,12 @@ async function showBreakWebview(context: vscode.ExtensionContext) {
                     await renderPage(currentPanel, state, context);
                     break;
 
+                case 'closeSocialBreak':
+                    console.log('Closing social break, returning to choice');
+                    state.mode = 'choice';
+                    await renderPage(currentPanel, state, context);
+                    break;
+
                 case 'close':
                     deductBreakTimePoints(context, state.username, state.breakStartTime);
                     cleanupMemes();

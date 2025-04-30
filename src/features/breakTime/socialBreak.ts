@@ -42,18 +42,17 @@ export async function fetchAndDisplayVideos(panel: vscode.WebviewPanel, state: S
             }
         }
 
-        panel.webview.html = getSocialBreakContent(messageIds, state.watchedVideos, username, totalSongs, "closePanel");
+        panel.webview.html = getSocialBreakContent(messageIds, state.watchedVideos, username, totalSongs, "closeSocialBreak");
     } catch (error) {
         vscode.window.showErrorMessage(`API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
-
-export function getSocialBreakContent(messageIds: { id: string; msg: string; lang: string }[], watchedVideos: Set<string>, username: string, songsCount: number, gameAction: String): string {
+export function getSocialBreakContent(messageIds: { id: string; msg: string; lang: string }[], watchedVideos: Set<string>, username: string, songsCount: number, gameAction: string): string {
     const values = [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, -40000];
     const shuffledValues = values.sort(() => Math.random() - 0.5);
-    const gameActionFunction = gameAction === "closePanel" ? "closePanel()" : "resetGame()";
-    const gameActionText = gameAction === "closePanel" ? "Close" : "Play Again";
+    const gameActionFunction = gameAction === "closeSocialBreak" ? "closeSocialBreak()" : "resetGame()";
+    const gameActionText = gameAction === "closeSocialBreak" ? "Close" : "Play Again";
     const videoURL = "https://animateoutput.s3.ap-south-1.amazonaws.com/";
     const sendMsgApiURL = "https://9xbaecf7o2.execute-api.ap-south-1.amazonaws.com/prod/callanimal";
 
@@ -194,7 +193,6 @@ export function getSocialBreakContent(messageIds: { id: string; msg: string; lan
             <button id="add-rounded-sum" style="margin-top: 10px; display: none; color: #333;" onclick="addofferValueToUserTotal();">Add Rounded Sum</button>
             <button id="reset" class="reset-button" onclick="${gameActionFunction}">${gameActionText}</button> 
             <button id="instruction" class="ins-button" onclick="toggleInstructions()">Instructions</button>  
-
             <div id="instructions" class="instructions-container">
                 <ol>
                 <li>You will play with the Computer</li>                
@@ -433,15 +431,17 @@ export function getSocialBreakContent(messageIds: { id: string; msg: string; lan
                     vscode.postMessage({ command: 'awardPoints', amount: 100 });
                 }
             }
+
             function toggleInstructions() {
-            const box = document.getElementById('instructions');
-            box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+                const box = document.getElementById('instructions');
+                box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
             }
+
             function resetGame() {
                 vscode.postMessage({ command: 'reset' });
             }
 
-            function closePanel() { vscode.postMessage({ command: 'close' }); }
+            function closeSocialBreak() { vscode.postMessage({ command: 'closeSocialBreak' }); }
 
             window.addEventListener('message', event => {
                 const message = event.data;
