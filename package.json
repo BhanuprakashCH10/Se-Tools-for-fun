@@ -69,7 +69,11 @@
       {
         "command": "extension.Appreciate",
         "title": "Appreciate Your Friends"
-      }
+      },
+      {
+        "command": "extension.takeABreak",
+        "title": "Appreciate Your Team"
+      } 
     ],
     "configuration": [
       {
