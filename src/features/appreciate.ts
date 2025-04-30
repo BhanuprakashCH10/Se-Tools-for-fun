@@ -460,10 +460,10 @@ export function getWebviewContent_GT(images: { id: string; thumbnail: string; fu
 				console.error('There was a problem with the fetch operation:', error);
 			});
 
-			function displayPoints(points) {
-			const pointsDisplay = document.getElementById('pointsDisplay');
-			pointsDisplay.textContent = \`Points Earned: \${points}\`;
-			}
+			// function displayPoints(points) {
+			// const pointsDisplay = document.getElementById('pointsDisplay');
+			// pointsDisplay.textContent = \`Points Earned: \${points}\`;
+			// }
 
   
 			// Set initial right panel full image on load

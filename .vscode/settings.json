@@ -1,5 +1,8 @@
 // Place your settings in this file to overwrite default and user settings.
 {
+	
+	"memeBreak.memeLimit": 5,
+	"memeBreak.memeCost": 100,
 	"files.exclude": {
 		"out": false // set this to true to hide the "out" folder with the compiled JS files
 	},
