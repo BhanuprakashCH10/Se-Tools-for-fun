@@ -61,7 +61,7 @@
       },
       {
         "command": "memeBreak.skipActivity",
-        "title": "Meme Break: Skip Activity"
+        "title": "Skip Activity"
       },
       {
         "command": "memeBreak.checkAuraPoints",
@@ -74,7 +74,11 @@
       {
         "command": "extension.Appreciate",
         "title": "Appreciate Your Friends"
-      }
+      },
+      {
+        "command": "extension.takeABreak",
+        "title": "Social Break"
+      } 
     ],
     "configuration": [
       {
@@ -147,6 +151,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/vscode": "^1.98.0",
+    "@types/axios": "^0.14.0",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
     "@typescript-eslint/parser": "^8.22.0",
     "@vscode/test-cli": "^0.0.10",
@@ -158,6 +163,7 @@
   "bundledDependencies": ["axios","form-data" ],  
   "dependencies": {
     "axios": "^1.9.0",
+    "googleapis": "^148.0.0",
     "form-data": "^4.0.0" 
   }
 }
