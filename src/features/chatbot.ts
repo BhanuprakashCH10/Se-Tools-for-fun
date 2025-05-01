@@ -231,7 +231,7 @@ export class Chatbot {
         <footer>
             <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" />
             <button id="send-btn">Send</button>
-            <button id="typing-speed-btn" style="background:#0b93f6;color:#fff;">Typing Speed</button>
+            
         </footer>
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script>

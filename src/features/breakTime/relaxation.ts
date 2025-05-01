@@ -91,18 +91,21 @@ export function getRelaxationContent(subMode?: string): string {
                     </div>
                     <p id="error" class="error-message"></p>
                     <div class="button-group">
-                        <button class="primary" onclick="submitWater()">Submit</button>
+                        <button class="primary" id="submitWaterBtn" onclick="submitWater()">Submit</button>
                     </div>
                     <script>
                         const vscode = acquireVsCodeApi();
                         function submitWater() {
                             const amount = parseInt(document.getElementById('waterAmount').value) || 0;
+                            const submitBtn = document.getElementById('submitWaterBtn');
                             if (amount < 250) {
                                 const errorEl = document.getElementById('error');
                                 errorEl.textContent = 'Please drink at least 250 ml!';
                                 errorEl.style.display = 'block';
                                 setTimeout(() => errorEl.style.display = 'none', 3000);
                             } else {
+                                submitBtn.disabled = true;
+                                submitBtn.textContent = 'Submitted';
                                 vscode.postMessage({ command: 'submitWater', amount: amount });
                             }
                         }

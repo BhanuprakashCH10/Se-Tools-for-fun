@@ -20,9 +20,9 @@ package-lock.json
 # --- Exclude all your TypeScript source… ---
 src/
 
-# …but re-include ONLY the memes folder you want shipped —
-!src/memes/
-!src/memes/**
+# --- Ensure compiled output is included ---
+!out/
 
-# (Everything else not matched above stays included: 
-#  package.json, README.md, CHANGELOG.md, LICENSE, out/**, etc.)
+# Ensure compiled files are included
+!out/**/*.js
+!out/**/*.map

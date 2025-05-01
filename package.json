@@ -1,23 +1,28 @@
 {
   "name": "codebuddy",
+  "publisher": "SE-Tool-dev",
   "displayName": "Code Buddy",
   "description": "Take a small break to connect with friends and relax for better productivity. Also, roast your code with brutal sarcasm and emojis. Additionally, track compilation errors and view statistics.",
-  "version": "0.0.4",
+  "version": "0.2.1",
   "engines": {
     "vscode": "^1.98.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BhanuprakashCH10/Se-Tools-for-fun.git"
   },
   "categories": [
     "Other"
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:extension.takeABreak",
-    "onCommand:extension.roastCode",
-    "onCommand:extension.countCompilationDetails",
-    "onCommand:extension.retrieveLastCompilationDetails",
-    "onCommand:extension.clearSpecificWorkspaceState",
-    "onCommand:extension.openChatbot",
-    "onCommand:extension.Appreciate"
+    "onCommand: extension.takeABreak",
+    "onCommand: extension.roastCode",
+    "onCommand: extension.countCompilationDetails",
+    "onCommand: extension.retrieveLastCompilationDetails",
+    "onCommand: extension.clearSpecificWorkspaceState",
+    "onCommand: extension.openChatbot",
+    "onCommand: extension.Appreciate"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -147,10 +152,12 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.19.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vsce": "^2.15.0"
   },
+  "bundledDependencies": ["axios","form-data" ],  
   "dependencies": {
     "axios": "^1.9.0",
-    "vsce": "^2.15.0"
+    "form-data": "^4.0.0" 
   }
 }
